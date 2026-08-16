@@ -86,7 +86,7 @@ export const LiveTransactionPopup: React.FC<LiveTransactionPopupProps> = ({
   const IconComponent = style.icon;
 
   return (
-    <div className="fixed bottom-5 left-5 z-40 max-w-sm w-full pointer-events-none select-none">
+    <div className="fixed bottom-3 sm:bottom-5 left-3 right-3 sm:right-auto sm:left-5 z-40 max-w-sm sm:w-full pointer-events-none select-none">
       <AnimatePresence mode="wait">
         <motion.div
           key={currentTransaction.id}

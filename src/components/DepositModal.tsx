@@ -57,13 +57,13 @@ export const DepositModal: React.FC<DepositModalProps> = ({
   return (
     <div
       id="deposit-modal-overlay"
-      className={`fixed inset-0 z-50 backdrop-blur-md flex items-center justify-center p-4 overflow-y-auto ${
+      className={`fixed inset-0 z-50 backdrop-blur-md flex items-center justify-center p-3 sm:p-4 overflow-y-auto ${
         isLight ? 'bg-slate-900/50' : 'bg-[#0A0E14]/85'
       }`}
       onClick={onClose}
     >
       <div
-        className={`relative rounded-2xl max-w-md w-full p-6 sm:p-7 shadow-2xl animate-in fade-in zoom-in-95 duration-150 border ${
+        className={`relative rounded-2xl max-w-md w-full p-5 sm:p-7 max-h-[92vh] overflow-y-auto shadow-2xl animate-in fade-in zoom-in-95 duration-150 border ${
           isLight
             ? 'bg-white border-slate-200 text-slate-900 shadow-slate-900/20'
             : 'bg-[#151921] border-white/10 text-white shadow-black'

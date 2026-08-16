@@ -454,10 +454,32 @@ export const InteractiveTradingChart: React.FC<InteractiveTradingChartProps> = (
     const rect = svgRef.current.getBoundingClientRect();
     const rawX = e.clientX - rect.left;
     const rawY = e.clientY - rect.top;
+    processChartCoords(rawX, rawY, rect.width, rect.height);
+  };
 
+  // Handle Touch on Mobile
+  const handleTouchMove = (e: React.TouchEvent<SVGSVGElement>) => {
+    if (!svgRef.current || e.touches.length === 0) return;
+    const touch = e.touches[0];
+    const rect = svgRef.current.getBoundingClientRect();
+    const rawX = touch.clientX - rect.left;
+    const rawY = touch.clientY - rect.top;
+    processChartCoords(rawX, rawY, rect.width, rect.height);
+  };
+
+  const handleTouchStart = (e: React.TouchEvent<SVGSVGElement>) => {
+    if (!svgRef.current || e.touches.length === 0) return;
+    const touch = e.touches[0];
+    const rect = svgRef.current.getBoundingClientRect();
+    const rawX = touch.clientX - rect.left;
+    const rawY = touch.clientY - rect.top;
+    processChartCoords(rawX, rawY, rect.width, rect.height);
+  };
+
+  const processChartCoords = (rawX: number, rawY: number, rectW: number, rectH: number) => {
     // Convert to SVG viewBox coordinates
-    const scaleX = width / rect.width;
-    const scaleY = totalSvgHeight / rect.height;
+    const scaleX = width / rectW;
+    const scaleY = totalSvgHeight / rectH;
     const svgX = rawX * scaleX;
     const svgY = rawY * scaleY;
 
@@ -550,12 +572,12 @@ export const InteractiveTradingChart: React.FC<InteractiveTradingChartProps> = (
       }`}
     >
       {/* Top Header: Pair Info, Live Ticks, Timeframes, Indicators, Tools */}
-      <div className="flex flex-wrap items-center justify-between gap-2 px-3.5 py-2.5 bg-[#0C1017]/90 border-b border-[#1E293B] text-xs font-mono">
+      <div className="flex items-center justify-between gap-2 px-2.5 sm:px-3.5 py-2 bg-[#0C1017]/95 border-b border-[#1E293B] text-xs font-mono overflow-x-auto no-scrollbar">
         {/* Left: Asset Pair, Live Price badge, 24h delta */}
-        <div className="flex items-center gap-2.5">
-          <div className="flex items-center gap-1.5 font-bold text-sm tracking-tight text-white">
-            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-ping" />
-            <span>{pair}</span>
+        <div className="flex items-center gap-2 flex-shrink-0">
+          <div className="flex items-center gap-1 font-bold text-xs sm:text-sm tracking-tight text-white">
+            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-ping flex-shrink-0" />
+            <span className="whitespace-nowrap">{pair}</span>
           </div>
 
           <motion.div
@@ -563,22 +585,22 @@ export const InteractiveTradingChart: React.FC<InteractiveTradingChartProps> = (
             initial={{ scale: 1.06 }}
             animate={{ scale: 1 }}
             transition={{ duration: 0.2 }}
-            className={`px-2.5 py-0.5 rounded-md font-bold text-sm flex items-center gap-1 transition-colors ${
+            className={`px-2 py-0.5 rounded-md font-bold text-xs sm:text-sm flex items-center gap-1 transition-colors whitespace-nowrap ${
               lastTickDirection === 'up'
                 ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/40'
                 : 'bg-rose-500/20 text-rose-400 border border-rose-500/40'
             }`}
           >
             {lastTickDirection === 'up' ? (
-              <TrendingUp className="w-3.5 h-3.5" />
+              <TrendingUp className="w-3 h-3 sm:w-3.5 sm:h-3.5 flex-shrink-0" />
             ) : (
-              <TrendingDown className="w-3.5 h-3.5" />
+              <TrendingDown className="w-3 h-3 sm:w-3.5 sm:h-3.5 flex-shrink-0" />
             )}
             <span>{formatPrice(currentQuote.price)}</span>
           </motion.div>
 
           <span
-            className={`hidden sm:inline-flex text-[11px] font-semibold ${
+            className={`hidden sm:inline-flex text-[11px] font-semibold whitespace-nowrap ${
               currentQuote.change24h >= 0 ? 'text-emerald-400' : 'text-rose-400'
             }`}
           >
@@ -587,11 +609,11 @@ export const InteractiveTradingChart: React.FC<InteractiveTradingChartProps> = (
           </span>
 
           {/* Candle countdown bar */}
-          <div className="hidden md:flex items-center gap-1.5 pl-2 border-l border-[#1E293B] text-[10px] text-slate-400">
-            <Radio className="w-3 h-3 text-emerald-400 animate-pulse" />
-            <span>Bar Closes:</span>
+          <div className="hidden lg:flex items-center gap-1.5 pl-2 border-l border-[#1E293B] text-[10px] text-slate-400">
+            <Radio className="w-3 h-3 text-emerald-400 animate-pulse flex-shrink-0" />
+            <span>Bar:</span>
             <span className="text-white font-bold">{secondsRemaining}s</span>
-            <div className="w-12 h-1.5 bg-slate-800 rounded-full overflow-hidden">
+            <div className="w-10 h-1.5 bg-slate-800 rounded-full overflow-hidden">
               <div
                 className="h-full bg-emerald-500 transition-all duration-100 ease-linear"
                 style={{ width: `${candleProgress}%` }}
@@ -601,13 +623,13 @@ export const InteractiveTradingChart: React.FC<InteractiveTradingChartProps> = (
         </div>
 
         {/* Center: Timeframe Selector */}
-        <div className="flex items-center gap-1 bg-[#151C28] p-0.5 rounded-lg border border-[#1E293B]">
+        <div className="flex items-center gap-0.5 bg-[#151C28] p-0.5 rounded-lg border border-[#1E293B] flex-shrink-0">
           {['1s', '1m', '5m', '15m', '1H', '4H', '1D'].map((tf) => (
             <button
               key={tf}
               type="button"
               onClick={() => setTimeInterval(tf)}
-              className={`px-2 py-0.5 rounded text-[11px] font-semibold transition-all ${
+              className={`px-1.5 sm:px-2 py-0.5 rounded text-[10px] sm:text-[11px] font-semibold transition-all whitespace-nowrap ${
                 timeInterval === tf
                   ? 'bg-emerald-500 text-black font-bold shadow-sm'
                   : 'text-slate-400 hover:text-white hover:bg-slate-800'
@@ -619,7 +641,7 @@ export const InteractiveTradingChart: React.FC<InteractiveTradingChartProps> = (
         </div>
 
         {/* Right: Chart Type, Indicators & Controls */}
-        <div className="flex items-center gap-1.5 flex-wrap">
+        <div className="flex items-center gap-1 sm:gap-1.5 flex-shrink-0">
           {/* Chart Style Switcher */}
           <div className="flex items-center gap-0.5 bg-[#151C28] p-0.5 rounded-lg border border-[#1E293B]">
             <button
@@ -636,7 +658,7 @@ export const InteractiveTradingChart: React.FC<InteractiveTradingChartProps> = (
               type="button"
               title="Hollow Candlesticks"
               onClick={() => setChartMode('hollow')}
-              className={`px-1.5 py-0.5 rounded text-[10px] uppercase font-bold ${
+              className={`hidden xs:inline-block px-1.5 py-0.5 rounded text-[10px] uppercase font-bold ${
                 chartMode === 'hollow' ? 'bg-slate-700 text-emerald-400' : 'text-slate-400 hover:text-white'
               }`}
             >
@@ -665,34 +687,34 @@ export const InteractiveTradingChart: React.FC<InteractiveTradingChartProps> = (
           </div>
 
           {/* Indicator toggles */}
-          <div className="flex items-center gap-1 bg-[#151C28] p-0.5 rounded-lg border border-[#1E293B]">
+          <div className="flex items-center gap-0.5 sm:gap-1 bg-[#151C28] p-0.5 rounded-lg border border-[#1E293B]">
             <button
               type="button"
               onClick={() => setShowEMA20(!showEMA20)}
-              className={`px-1.5 py-0.5 rounded text-[10px] font-bold transition-colors ${
+              className={`px-1 sm:px-1.5 py-0.5 rounded text-[9px] sm:text-[10px] font-bold transition-colors ${
                 showEMA20 ? 'bg-cyan-500/20 text-cyan-400 border border-cyan-500/40' : 'text-slate-500 hover:text-slate-300'
               }`}
-              title="Toggle Exponential Moving Average (20-period)"
+              title="Toggle EMA 20"
             >
               EMA20
             </button>
             <button
               type="button"
               onClick={() => setShowEMA50(!showEMA50)}
-              className={`px-1.5 py-0.5 rounded text-[10px] font-bold transition-colors ${
+              className={`hidden sm:inline-block px-1.5 py-0.5 rounded text-[10px] font-bold transition-colors ${
                 showEMA50 ? 'bg-amber-500/20 text-amber-400 border border-amber-500/40' : 'text-slate-500 hover:text-slate-300'
               }`}
-              title="Toggle Exponential Moving Average (50-period)"
+              title="Toggle EMA 50"
             >
               EMA50
             </button>
             <button
               type="button"
               onClick={() => setShowBollinger(!showBollinger)}
-              className={`px-1.5 py-0.5 rounded text-[10px] font-bold transition-colors ${
+              className={`px-1 sm:px-1.5 py-0.5 rounded text-[9px] sm:text-[10px] font-bold transition-colors ${
                 showBollinger ? 'bg-purple-500/20 text-purple-400 border border-purple-500/40' : 'text-slate-500 hover:text-slate-300'
               }`}
-              title="Toggle Bollinger Bands (20, 2)"
+              title="Toggle Bollinger Bands"
             >
               BB
             </button>
@@ -729,7 +751,7 @@ export const InteractiveTradingChart: React.FC<InteractiveTradingChartProps> = (
                 ? 'bg-amber-500/20 text-amber-400 border border-amber-500/40'
                 : 'text-slate-500 hover:text-slate-300 hover:bg-slate-800'
             }`}
-            title={turboMode ? 'Turbo Live Ticks Active (0.5s intervals)' : 'Standard Tick Speed'}
+            title={turboMode ? 'Turbo Ticks Active' : 'Standard Speed'}
           >
             <Zap className="w-3.5 h-3.5" />
           </button>
@@ -747,7 +769,7 @@ export const InteractiveTradingChart: React.FC<InteractiveTradingChartProps> = (
                 ? 'bg-emerald-500 text-black font-bold'
                 : 'text-slate-400 hover:text-white hover:bg-slate-800'
             }`}
-            title="Measure Price Range & % Delta"
+            title="Measure Price Range"
           >
             <Ruler className="w-3.5 h-3.5" />
           </button>
@@ -785,7 +807,7 @@ export const InteractiveTradingChart: React.FC<InteractiveTradingChartProps> = (
             type="button"
             onClick={() => setIsFullscreen(!isFullscreen)}
             className="p-1 text-slate-400 hover:text-white hover:bg-slate-800 rounded"
-            title={isFullscreen ? 'Exit Fullscreen' : 'Expand Chart to Fullscreen'}
+            title={isFullscreen ? 'Exit Fullscreen' : 'Expand Chart'}
           >
             {isFullscreen ? <Minimize2 className="w-3.5 h-3.5" /> : <Maximize2 className="w-3.5 h-3.5" />}
           </button>
@@ -793,12 +815,12 @@ export const InteractiveTradingChart: React.FC<InteractiveTradingChartProps> = (
       </div>
 
       {/* Floating Live OHLCV Inspector Strip */}
-      <div className="flex flex-wrap items-center justify-between px-3.5 py-1 bg-[#0A0D13] border-b border-[#1E293B]/60 text-[11px] font-mono text-slate-400">
-        <div className="flex items-center gap-3.5 flex-wrap">
+      <div className="flex items-center justify-between px-2.5 sm:px-3.5 py-1 bg-[#0A0D13] border-b border-[#1E293B]/60 text-[10px] sm:text-[11px] font-mono text-slate-400 overflow-x-auto no-scrollbar">
+        <div className="flex items-center gap-2 sm:gap-3.5 flex-nowrap whitespace-nowrap">
           {inspectedCandle && (
             <>
               <span>
-                Time: <strong className="text-white">{inspectedCandle.time}</strong>
+                <strong className="text-white">{inspectedCandle.time}</strong>
               </span>
               <span>
                 O: <strong className="text-white">{formatPrice(inspectedCandle.open)}</strong>
@@ -812,10 +834,10 @@ export const InteractiveTradingChart: React.FC<InteractiveTradingChartProps> = (
               <span>
                 C: <strong className="text-white">{formatPrice(inspectedCandle.close)}</strong>
               </span>
-              <span>
+              <span className="hidden xs:inline">
                 Vol: <strong className="text-slate-300">{inspectedCandle.volume.toLocaleString()}</strong>
               </span>
-              <span className={inspectedChange >= 0 ? 'text-emerald-400' : 'text-rose-400'}>
+              <span className={inspectedChange >= 0 ? 'text-emerald-400 font-bold' : 'text-rose-400 font-bold'}>
                 Δ {inspectedChange >= 0 ? '+' : ''}
                 {inspectedChange.toFixed(2)}%
               </span>
@@ -824,7 +846,7 @@ export const InteractiveTradingChart: React.FC<InteractiveTradingChartProps> = (
         </div>
 
         {/* Legend for active indicators */}
-        <div className="hidden lg:flex items-center gap-3 text-[10px]">
+        <div className="hidden lg:flex items-center gap-3 text-[10px] flex-shrink-0 pl-3">
           {showEMA20 && (
             <span className="flex items-center gap-1 text-cyan-400">
               <span className="w-2.5 h-0.5 bg-cyan-400 inline-block" /> EMA(20)
@@ -842,14 +864,14 @@ export const InteractiveTradingChart: React.FC<InteractiveTradingChartProps> = (
           )}
           {activePairPositions.length > 0 && (
             <span className="flex items-center gap-1 text-emerald-400 font-bold">
-              <span className="w-2 h-2 rounded-full bg-emerald-400" /> {activePairPositions.length} Position Open
+              <span className="w-2 h-2 rounded-full bg-emerald-400" /> {activePairPositions.length} Open
             </span>
           )}
         </div>
       </div>
 
       {/* Main SVG Interactive Trading Stage */}
-      <div className="relative flex-1 w-full bg-[#080B10] cursor-crosshair overflow-hidden">
+      <div className="relative flex-1 w-full bg-[#080B10] cursor-crosshair overflow-hidden touch-none">
         <svg
           ref={svgRef}
           viewBox={`0 0 ${width} ${totalSvgHeight}`}
@@ -857,6 +879,9 @@ export const InteractiveTradingChart: React.FC<InteractiveTradingChartProps> = (
           preserveAspectRatio="none"
           onMouseMove={handleMouseMove}
           onMouseLeave={handleMouseLeave}
+          onTouchStart={handleTouchStart}
+          onTouchMove={handleTouchMove}
+          onTouchEnd={handleMouseLeave}
           onClick={handleChartClick}
         >
           <defs>
