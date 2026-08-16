@@ -42,6 +42,7 @@ import { useTheme } from '../context/ThemeContext';
 import { useTrading, LiveMarketQuote } from '../context/TradingContext';
 import { DepositModal } from './DepositModal';
 import { WithdrawModal } from './WithdrawModal';
+import { InteractiveTradingChart } from './InteractiveTradingChart';
 
 interface TradingTerminalPreviewProps {
   onShowToast: (title: string, message: string, type?: 'success' | 'info') => void;
@@ -163,6 +164,7 @@ export const TradingTerminalPreview: React.FC<TradingTerminalPreviewProps> = ({ 
     }
   };
 
+  // Handle close position
   const handleClosePosition = (posId: string) => {
     const res = closePosition(posId);
     if (res.success) {
@@ -172,194 +174,6 @@ export const TradingTerminalPreview: React.FC<TradingTerminalPreviewProps> = ({ 
         res.pnl >= 0 ? 'success' : 'info'
       );
     }
-  };
-
-  // Render SVG Candlestick & Volume Chart
-  const renderCandleChart = () => {
-    const data = candleDataset;
-    const width = 640;
-    const height = 280;
-    const padding = { top: 20, right: 65, bottom: 40, left: 10 };
-
-    const chartWidth = width - padding.left - padding.right;
-    const chartHeight = height - padding.top - padding.bottom;
-
-    const allPrices = data.flatMap((d) => [d.high, d.low]);
-    const minPrice = Math.min(...allPrices);
-    const maxPrice = Math.max(...allPrices);
-    const priceRange = maxPrice - minPrice || 1;
-
-    const maxVolume = Math.max(...data.map((d) => d.volume));
-    const candleWidth = Math.max(8, (chartWidth / data.length) * 0.55);
-
-    const getY = (price: number) => {
-      return padding.top + chartHeight - ((price - minPrice) / priceRange) * chartHeight;
-    };
-
-    const priceTicks = [
-      minPrice + priceRange * 0.9,
-      minPrice + priceRange * 0.6,
-      minPrice + priceRange * 0.3,
-      minPrice,
-    ];
-
-    const maPoints = data.map((d, idx) => {
-      const x = padding.left + (idx + 0.5) * (chartWidth / data.length);
-      const avg = (d.open + d.close + d.high + d.low) / 4;
-      const y = getY(avg);
-      return `${x},${y}`;
-    });
-    const maPath = `M ${maPoints.join(' L ')}`;
-
-    return (
-      <div className="relative w-full h-[290px] select-none font-mono">
-        <svg
-          viewBox={`0 0 ${width} ${height}`}
-          className="w-full h-full overflow-visible"
-          preserveAspectRatio="none"
-        >
-          {/* Horizontal Grid lines and Price Axis */}
-          {priceTicks.map((price, idx) => {
-            const y = getY(price);
-            return (
-              <g key={idx}>
-                <line
-                  x1={padding.left}
-                  y1={y}
-                  x2={width - padding.right}
-                  y2={y}
-                  stroke={isLight ? '#E2E8F0' : '#1E293B'}
-                  strokeDasharray="2 4"
-                />
-                <text
-                  x={width - padding.right + 8}
-                  y={y + 3}
-                  fill={isLight ? '#64748B' : '#94A3B8'}
-                  fontSize="9"
-                  fontFamily="var(--font-mono)"
-                >
-                  ${price >= 100 ? price.toLocaleString('en-US', { maximumFractionDigits: 0 }) : price.toFixed(4)}
-                </text>
-              </g>
-            );
-          })}
-
-          {/* Volume bars behind candles */}
-          {data.map((d, idx) => {
-            const x = padding.left + (idx + 0.5) * (chartWidth / data.length);
-            const isBullish = d.close >= d.open;
-            const volHeight = (d.volume / maxVolume) * 35;
-            const volY = height - padding.bottom - volHeight;
-            return (
-              <rect
-                key={`vol-${idx}`}
-                x={x - candleWidth / 2}
-                y={volY}
-                width={candleWidth}
-                height={volHeight}
-                fill={isBullish ? (isLight ? '#059669' : '#10B981') : (isLight ? '#DC2626' : '#EF4444')}
-                opacity={isLight ? '0.15' : '0.2'}
-              />
-            );
-          })}
-
-          {/* Candlesticks */}
-          {chartType === 'candles' &&
-            data.map((d, idx) => {
-              const x = padding.left + (idx + 0.5) * (chartWidth / data.length);
-              const isBullish = d.close >= d.open;
-              const color = isBullish
-                ? isLight ? '#059669' : '#10B981'
-                : isLight ? '#DC2626' : '#EF4444';
-
-              const highY = getY(d.high);
-              const lowY = getY(d.low);
-              const openY = getY(d.open);
-              const closeY = getY(d.close);
-
-              const bodyTop = Math.min(openY, closeY);
-              const bodyHeight = Math.max(2, Math.abs(openY - closeY));
-
-              return (
-                <g
-                  key={`candle-${idx}`}
-                  className="cursor-pointer group"
-                  onMouseEnter={() => setHoveredCandle(d)}
-                  onMouseLeave={() => setHoveredCandle(null)}
-                >
-                  {/* Wick */}
-                  <line
-                    x1={x}
-                    y1={highY}
-                    x2={x}
-                    y2={lowY}
-                    stroke={color}
-                    strokeWidth="1.25"
-                  />
-                  {/* Body */}
-                  <rect
-                    x={x - candleWidth / 2}
-                    y={bodyTop}
-                    width={candleWidth}
-                    height={bodyHeight}
-                    fill={color}
-                    rx="1"
-                  />
-                  {/* Time label */}
-                  <text
-                    x={x}
-                    y={height - 10}
-                    fill={isLight ? '#94A3B8' : '#64748B'}
-                    fontSize="9"
-                    fontFamily="var(--font-mono)"
-                    textAnchor="middle"
-                  >
-                    {d.time}
-                  </text>
-                </g>
-              );
-            })}
-
-          {/* Line Chart fallback if selected */}
-          {chartType === 'line' && (
-            <path
-              d={maPath}
-              fill="none"
-              stroke="#38BDF8"
-              strokeWidth="2"
-              strokeLinecap="round"
-            />
-          )}
-
-          {/* Moving Average Line Overlay */}
-          {showIndicators && chartType === 'candles' && (
-            <path
-              d={maPath}
-              fill="none"
-              stroke="#38BDF8"
-              strokeWidth="1.5"
-              strokeDasharray="4 4"
-              opacity="0.8"
-            />
-          )}
-        </svg>
-
-        {/* Floating Indicator Tooltip */}
-        {hoveredCandle && (
-          <div className={`absolute top-2 left-3 rounded px-3 py-1.5 flex items-center gap-3 text-[10px] font-mono z-20 pointer-events-none border shadow-md ${
-            isLight
-              ? 'bg-white border-slate-200 text-slate-800'
-              : 'bg-[#080B10]/90 border-[#334155] text-white'
-          }`}>
-            <span className={isLight ? 'text-slate-500' : 'text-[#94A3B8]'}>Time: <b className={isLight ? 'text-slate-900' : 'text-white'}>{hoveredCandle.time}</b></span>
-            <span className={isLight ? 'text-slate-500' : 'text-[#94A3B8]'}>O: <b className={isLight ? 'text-slate-900' : 'text-white'}>${hoveredCandle.open}</b></span>
-            <span className={isLight ? 'text-slate-500' : 'text-[#94A3B8]'}>H: <b className={isLight ? 'text-emerald-600' : 'text-[#10B981]'}>${hoveredCandle.high}</b></span>
-            <span className={isLight ? 'text-slate-500' : 'text-[#94A3B8]'}>L: <b className={isLight ? 'text-rose-600' : 'text-[#EF4444]'}>${hoveredCandle.low}</b></span>
-            <span className={isLight ? 'text-slate-500' : 'text-[#94A3B8]'}>C: <b className={isLight ? 'text-slate-900' : 'text-white'}>${hoveredCandle.close}</b></span>
-          </div>
-        )}
-      </div>
-    );
   };
 
   return (
@@ -582,112 +396,47 @@ export const TradingTerminalPreview: React.FC<TradingTerminalPreviewProps> = ({ 
                 : 'bg-[#10141D] border-white/10'
             }`}>
               
-              {/* TAB 1: TRADING DESK & CHART */}
+              {/* TAB 1: TRADING DESK & LIVE INTERACTIVE CHART */}
               {activeSidebarTab === 'overview' && (
-                <div>
-                  {/* Chart Header Controls */}
-                  <div className={`flex flex-wrap items-center justify-between gap-3 pb-4 border-b ${
-                    isLight ? 'border-slate-200' : 'border-white/10'
-                  }`}>
-                    {/* Pair Selector & Price */}
-                    <div className="flex items-center gap-3">
-                      <select
-                        value={selectedPair}
-                        onChange={(e) => setSelectedPair(e.target.value)}
-                        aria-label="Select Trading Pair"
-                        className={`font-mono font-bold text-sm px-3 py-1.5 rounded-md focus:outline-none focus:border-blue-500 border ${
-                          isLight
-                            ? 'bg-slate-50 border-slate-300 text-slate-900'
-                            : 'bg-[#151921] border-white/10 text-white'
-                        }`}
-                      >
-                        {Object.keys(markets).map((p) => (
-                          <option key={p} value={p}>{p} - {markets[p].name}</option>
-                        ))}
-                      </select>
-
-                      <div>
-                        <div className={`text-lg font-bold font-mono transition-colors ${
-                          currentMarket.lastTick === 'up' ? (isLight ? 'text-emerald-700' : 'text-emerald-400') :
-                          currentMarket.lastTick === 'down' ? (isLight ? 'text-rose-700' : 'text-rose-400') :
-                          isLight ? 'text-slate-900' : 'text-white'
-                        }`}>
-                          ${currentMarket.price >= 100 ? currentMarket.price.toLocaleString('en-US', { minimumFractionDigits: 2 }) : currentMarket.price.toFixed(4)}
-                        </div>
-                        <div className={`text-[10px] font-mono ${currentMarket.change24h >= 0 ? (isLight ? 'text-emerald-700' : 'text-green-400') : (isLight ? 'text-rose-700' : 'text-red-400')}`}>
-                          {currentMarket.change24h >= 0 ? '+' : ''}{currentMarket.change24h}% (24h)
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Timeframe Interval Buttons */}
-                    <div className={`flex items-center gap-1 p-1 rounded-md border ${
-                      isLight ? 'bg-slate-100 border-slate-200' : 'bg-[#151921] border-white/10'
-                    }`}>
-                      {(['1H', '4H', '1D', '1W'] as TimeInterval[]).map((tf) => (
-                        <button
-                          key={tf}
-                          type="button"
-                          onClick={() => setTimeInterval(tf)}
-                          className={`px-2.5 py-1 text-xs font-semibold rounded font-mono transition-colors ${
-                            timeInterval === tf
-                              ? 'bg-blue-600 text-white shadow-sm'
-                              : isLight
-                                ? 'text-slate-600 hover:text-slate-900'
-                                : 'text-gray-400 hover:text-white'
-                          }`}
-                        >
-                          {tf}
-                        </button>
-                      ))}
+                <div className="space-y-3">
+                  {/* Pair quick switch pill bar */}
+                  <div className="flex items-center justify-between gap-2 overflow-x-auto pb-1">
+                    <div className="flex items-center gap-1.5 overflow-x-auto">
+                      {Object.keys(markets).map((p) => {
+                        const m = markets[p];
+                        const isSelected = selectedPair === p;
+                        return (
+                          <button
+                            key={p}
+                            type="button"
+                            onClick={() => setSelectedPair(p)}
+                            className={`px-2.5 py-1 rounded-lg text-xs font-mono font-bold transition-all flex items-center gap-1.5 whitespace-nowrap border ${
+                              isSelected
+                                ? 'bg-blue-600 text-white border-blue-500 shadow-sm'
+                                : isLight
+                                ? 'bg-slate-100 text-slate-700 hover:bg-slate-200 border-slate-200'
+                                : 'bg-[#151921] text-gray-300 hover:text-white hover:bg-white/10 border-white/5'
+                            }`}
+                          >
+                            <span>{p}</span>
+                            <span className={`text-[10px] ${m.change24h >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
+                              {m.change24h >= 0 ? '+' : ''}{m.change24h}%
+                            </span>
+                          </button>
+                        );
+                      })}
                     </div>
                   </div>
 
-                  {/* Chart Toolbar */}
-                  <div className={`flex flex-wrap items-center justify-between gap-2 py-3 border-b text-xs ${
-                    isLight ? 'border-slate-100' : 'border-white/5'
-                  }`}>
-                    <div className="flex items-center gap-2">
-                      <button
-                        type="button"
-                        onClick={() => setChartType(chartType === 'candles' ? 'line' : 'candles')}
-                        className={`px-2.5 py-1 rounded border text-[11px] font-medium transition-colors ${
-                          chartType === 'candles'
-                            ? isLight ? 'bg-slate-100 border-blue-500 text-blue-700 font-semibold' : 'bg-[#151921] border-blue-500/50 text-white'
-                            : isLight ? 'bg-white border-slate-200 text-slate-600' : 'bg-black/30 border-white/10 text-gray-400'
-                        }`}
-                      >
-                        Candles
-                      </button>
-
-                      <button
-                        type="button"
-                        onClick={() => setShowIndicators(!showIndicators)}
-                        className={`px-2.5 py-1 rounded border text-[11px] font-medium transition-colors ${
-                          showIndicators
-                            ? isLight ? 'bg-blue-50 border-blue-300 text-blue-700 font-semibold' : 'bg-[#151921] border-blue-500/50 text-blue-400'
-                            : isLight ? 'bg-white border-slate-200 text-slate-600' : 'bg-black/30 border-white/10 text-gray-400'
-                        }`}
-                      >
-                        EMA (20/50)
-                      </button>
-
-                      <span className={`text-[11px] font-mono hidden sm:inline ${
-                        isLight ? 'text-slate-600' : 'text-gray-400'
-                      }`}>
-                        Spread: <b className="text-blue-500">{currentMarket.spread}</b>
-                      </span>
-                    </div>
-
-                    <div className={`flex items-center gap-2 ${isLight ? 'text-slate-500' : 'text-gray-500'}`}>
-                      <span className="text-[10px] font-mono">VOL (24h): {currentMarket.volume24h}</span>
-                    </div>
-                  </div>
-
-                  {/* Candlestick Interactive Chart Area */}
-                  <div className="mt-3">
-                    {renderCandleChart()}
-                  </div>
+                  {/* High-Precision Animated Live Trading Graph */}
+                  <InteractiveTradingChart
+                    pair={selectedPair}
+                    currentQuote={currentMarket}
+                    positions={positions}
+                    isLight={isLight}
+                    onClosePosition={handleClosePosition}
+                    onShowToast={onShowToast}
+                  />
                 </div>
               )}
 

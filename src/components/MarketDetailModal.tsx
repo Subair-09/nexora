@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { X, TrendingUp, TrendingDown, ArrowRight, BarChart2, ShieldCheck, Activity } from 'lucide-react';
+import { X, TrendingUp, TrendingDown, ArrowRight, Activity, Zap, Radio } from 'lucide-react';
 import { MarketAsset } from '../types';
 import { useTheme } from '../context/ThemeContext';
 
@@ -16,10 +16,30 @@ export const MarketDetailModal: React.FC<MarketDetailModalProps> = ({
 }) => {
   const { theme } = useTheme();
   const isLight = theme === 'light';
+  const [hoveredIdx, setHoveredIdx] = useState<number | null>(null);
 
   if (!market) return null;
 
   const isPositive = market.change24h >= 0;
+  const sparkline = market.sparkline || [100, 102, 101, 104, 103, 106, 105, 108, 107, 109];
+  const minVal = Math.min(...sparkline);
+  const maxVal = Math.max(...sparkline);
+  const range = maxVal - minVal || 1;
+
+  const svgWidth = 420;
+  const svgHeight = 110;
+  const pad = { top: 12, right: 12, bottom: 20, left: 12 };
+  const chartW = svgWidth - pad.left - pad.right;
+  const chartH = svgHeight - pad.top - pad.bottom;
+
+  const getPtX = (i: number) => pad.left + (i / (sparkline.length - 1)) * chartW;
+  const getPtY = (val: number) => pad.top + chartH - ((val - minVal) / range) * chartH;
+
+  const points = sparkline.map((val, i) => `${getPtX(i)},${getPtY(val)}`);
+  const linePath = `M ${points.join(' L ')}`;
+  const areaPath = `M ${getPtX(0)},${pad.top + chartH} L ${points.join(' L ')} L ${getPtX(sparkline.length - 1)},${pad.top + chartH} Z`;
+
+  const hoveredVal = hoveredIdx !== null ? sparkline[hoveredIdx] : null;
 
   return (
     <div
@@ -75,7 +95,7 @@ export const MarketDetailModal: React.FC<MarketDetailModalProps> = ({
         </div>
 
         {/* Price & Change Banner */}
-        <div className={`p-4 rounded-xl flex items-center justify-between mb-6 border ${
+        <div className={`p-4 rounded-xl flex items-center justify-between mb-4 border ${
           isLight
             ? 'bg-slate-50 border-slate-200'
             : 'bg-black/40 border-white/10'
@@ -106,27 +126,83 @@ export const MarketDetailModal: React.FC<MarketDetailModalProps> = ({
           </div>
         </div>
 
+        {/* Animated Interactive Mini Live Graph */}
+        <div className={`mb-4 p-3 rounded-xl border relative overflow-hidden ${
+          isLight ? 'bg-slate-50 border-slate-200' : 'bg-black/50 border-white/10'
+        }`}>
+          <div className="flex items-center justify-between text-[10px] font-mono text-slate-400 mb-1">
+            <span className="flex items-center gap-1">
+              <Radio className="w-3 h-3 text-emerald-400 animate-pulse" /> Live 24h Trajectory
+            </span>
+            {hoveredVal !== null ? (
+              <span className="text-white font-bold">${hoveredVal.toLocaleString()}</span>
+            ) : (
+              <span className="text-slate-500">Hover graph to inspect</span>
+            )}
+          </div>
+
+          <svg viewBox={`0 0 ${svgWidth} ${svgHeight}`} className="w-full h-24 overflow-visible">
+            <defs>
+              <linearGradient id="modalSparkGradient" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stopColor={isPositive ? '#10B981' : '#EF4444'} stopOpacity="0.3" />
+                <stop offset="100%" stopColor={isPositive ? '#10B981' : '#EF4444'} stopOpacity="0.0" />
+              </linearGradient>
+            </defs>
+
+            {/* Area */}
+            <path d={areaPath} fill="url(#modalSparkGradient)" />
+            {/* Line */}
+            <path
+              d={linePath}
+              fill="none"
+              stroke={isPositive ? '#10B981' : '#EF4444'}
+              strokeWidth="2.25"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+
+            {/* Interactive Points */}
+            {sparkline.map((val, idx) => {
+              const x = getPtX(idx);
+              const y = getPtY(val);
+              const isHovered = hoveredIdx === idx;
+              return (
+                <g key={`pt-${idx}`} className="cursor-pointer" onMouseEnter={() => setHoveredIdx(idx)} onMouseLeave={() => setHoveredIdx(null)}>
+                  <circle
+                    cx={x}
+                    cy={y}
+                    r={isHovered ? 5 : 2.5}
+                    fill={isPositive ? '#10B981' : '#EF4444'}
+                    stroke="#FFFFFF"
+                    strokeWidth={isHovered ? 2 : 0}
+                  />
+                </g>
+              );
+            })}
+          </svg>
+        </div>
+
         {/* Technical Data Grid */}
-        <div className="grid grid-cols-2 gap-3 mb-6 text-xs font-mono">
-          <div className={`p-3 rounded-lg border ${
+        <div className="grid grid-cols-2 gap-2.5 mb-4 text-xs font-mono">
+          <div className={`p-2.5 rounded-lg border ${
             isLight ? 'bg-slate-50 border-slate-200' : 'bg-black/30 border-white/10'
           }`}>
             <span className={`block text-[10px] ${isLight ? 'text-slate-400' : 'text-gray-500'}`}>24h High</span>
             <span className={`font-bold mt-0.5 block ${isLight ? 'text-slate-900' : 'text-white'}`}>{market.high24h}</span>
           </div>
-          <div className={`p-3 rounded-lg border ${
+          <div className={`p-2.5 rounded-lg border ${
             isLight ? 'bg-slate-50 border-slate-200' : 'bg-black/30 border-white/10'
           }`}>
             <span className={`block text-[10px] ${isLight ? 'text-slate-400' : 'text-gray-500'}`}>24h Low</span>
             <span className={`font-bold mt-0.5 block ${isLight ? 'text-slate-900' : 'text-white'}`}>{market.low24h}</span>
           </div>
-          <div className={`p-3 rounded-lg border ${
+          <div className={`p-2.5 rounded-lg border ${
             isLight ? 'bg-slate-50 border-slate-200' : 'bg-black/30 border-white/10'
           }`}>
             <span className={`block text-[10px] ${isLight ? 'text-slate-400' : 'text-gray-500'}`}>24h Volume</span>
             <span className={`font-bold mt-0.5 block ${isLight ? 'text-blue-700' : 'text-blue-400'}`}>{market.volume24h}</span>
           </div>
-          <div className={`p-3 rounded-lg border ${
+          <div className={`p-2.5 rounded-lg border ${
             isLight ? 'bg-slate-50 border-slate-200' : 'bg-black/30 border-white/10'
           }`}>
             <span className={`block text-[10px] ${isLight ? 'text-slate-400' : 'text-gray-500'}`}>Spread</span>
@@ -135,7 +211,7 @@ export const MarketDetailModal: React.FC<MarketDetailModalProps> = ({
         </div>
 
         {/* Bid / Ask Breakdown */}
-        <div className={`p-3.5 rounded-xl flex items-center justify-between text-xs font-mono mb-6 border ${
+        <div className={`p-3 rounded-xl flex items-center justify-between text-xs font-mono mb-5 border ${
           isLight ? 'bg-slate-50 border-slate-200' : 'bg-black/40 border-white/10'
         }`}>
           <div className="text-left">
@@ -159,7 +235,7 @@ export const MarketDetailModal: React.FC<MarketDetailModalProps> = ({
             }}
             className="w-full py-3 px-4 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs flex items-center justify-center gap-2 transition-all shadow-md shadow-blue-600/20"
           >
-            <span>Open in Trading Terminal</span>
+            <span>Launch in Interactive Terminal</span>
             <ArrowRight className="w-4 h-4 text-white" />
           </button>
         </div>
